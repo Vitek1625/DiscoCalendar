@@ -1,5 +1,6 @@
 const {Interaction, MessageFlags} = require('discord.js');
 const db = require('../database-accesspoint')
+const {PaggerSystem, PagerSystem} = require('../Utils/pager') 
 
 module.exports = {
   handleCommandInteraction,
@@ -171,7 +172,7 @@ function displayTasksCommand(interaction) {
             break;
     }
 
-    let taskList = "";
+    let taskList = [];
     
     db.each("SELECT title, " +
          "description, expected_minutes, " +
@@ -185,8 +186,8 @@ function displayTasksCommand(interaction) {
                 console.error("SQL error:", err);
                 return;
             }
-        
-            taskList += JSON.stringify(row) + "\n";
+
+            taskList.push(JSON.stringify(row));
 
             // taskList += Object.entries(row)
             //     .map(([key, value]) => `${key}: ${value}`)
@@ -208,13 +209,12 @@ function displayTasksCommand(interaction) {
         },
         (err, count) => {
             console.log(taskList);
-            if (taskList == "") {
+            if (taskList.length === 0) {
                 taskList = "No tasks!"
             }
-            interaction.reply({
-                content: taskList,
-                flags: MessageFlags.Ephemeral,
-            });
+
+            const pager = new PagerSystem(2);
+            pager.sendPaginatedMessage(interaction, taskList)
         }
     );
 }

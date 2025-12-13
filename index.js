@@ -1,5 +1,5 @@
 const ACB = require('./commands/addCommandBuilder');
-const DCB = require('./commands/display');
+const DCB = require('./commands/displayCommandBuilder');
 const CC = require('./commands/commandCenter')
 const {Client, Events, SlashCommandBuilder, InteractionType} = require('discord.js');
 const {token} = require('./config.json');
