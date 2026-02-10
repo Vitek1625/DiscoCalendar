@@ -1,10 +1,13 @@
 const {Interaction, MessageFlags} = require('discord.js');
-const db = require('../database-accesspoint')
-const {PaggerSystem, PagerSystem} = require('../Utils/pager') 
+const db = require('../database-accesspoint');
+const {PagerSystem} = require('../Utils/pager');
+const cron = require('node-cron');
 
 module.exports = {
   handleCommandInteraction,
+  loadSheduleTasks,
 }
+
 /**
  * @param {Interaction<import('discord.js').CacheType>} interaction
  */
@@ -218,3 +221,23 @@ function displayTasksCommand(interaction) {
         }
     );
 }
+
+/**
+ * @param {import('discord.js').Client} client
+ * @param {string} channel_id
+ */
+function loadSheduleTasks(client, channel_id){
+    cron.schedule('4 22 * * *', async () => {
+        const channel = await client.channels.fetch(channel_id);
+        const name = "298034919085572097";
+        if (!channel) return console.error("Channel not found");
+
+            channel.send(`<@${name}> It's time!`);
+        },
+        {
+            scheduled: true,
+            timezone: "Europe/Warsaw" // set your timezone
+        }
+    );
+}
+

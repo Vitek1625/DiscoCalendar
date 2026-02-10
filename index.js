@@ -43,6 +43,7 @@ client.once(Events.ClientReady, c => {
         guild.commands.create(dailies);
         guild.commands.create(ACB.addCommandsBuilder());
         guild.commands.create(DCB.displayPlanCB());
+        CC.loadSheduleTasks(client, "697380448073941045");
 
         console.log('✅ Registered command in this guild');
     }
