@@ -59,6 +59,10 @@ function addTask(interaction) {
     const description = interaction.options.getString("description");
     const expected_minutes = interaction.options.getInteger("expected_minutes");
     const due_date = interaction.options.getString("due_date") ?? null;
+    const user_id = interaction.user.id; 
+    // add user to datavase if doesn't exist
+    // get user database id based on his discord id
+    // assign new task to user
     
    db.run("INSERT INTO task (title, " +
          "description, expected_minutes, " +
@@ -122,15 +126,30 @@ function connectTaskToSchedule(interaction, task_id) {
     const hour_to = interaction.options.getString("hour_to");
     const fixed_schedule = interaction.options.getBoolean("fixed_schedule");
 
-    db.run("INSERT INTO schedule (" +
-         "day_of_week, hour_from, " +
-         "hour_to, fixed_schedule, " +
-         "task_id) VALUES (?, ?, ?, ?, ?)",
+    const insertScheduleSql = `
+        INSERT INTO schedule (
+            day_of_week,
+            hour_from,
+            hour_to,
+            fixed_schedule,
+            task_id
+        ) VALUES (?, ?, ?, ?, ?)
+    `;
+
+    db.run(insertScheduleSql,
            [
              day_of_week, hour_from,
              hour_to, fixed_schedule,
              task_id
-           ]
+           ],
+            function (err) {
+                if (err) {
+                    console.error("Error inserting schedule:", err.message);
+                    return;
+                }
+
+                console.log("New schedule inserted with ID:", this.lastID);
+            }
         );
 
     interaction.reply({
@@ -146,7 +165,12 @@ function addTag(interaction) {
     const name = interaction.options.getString("name");
     const icon = interaction.options.getString("icon") ?? null;
 
-    db.run("INSERT INTO tag (name, icon) VALUES (?, ?)", [name, icon]);
+    db.run(`
+        INSERT INTO tag (
+            name,
+            icon
+        ) VALUES (?, ?)`,
+        [name, icon]);
 
     interaction.reply({
         content: "Added new tag!",
@@ -177,20 +201,44 @@ function displayTasksCommand(interaction) {
 
     let taskList = [];
     
-    db.each("SELECT title, " +
-         "description, expected_minutes, " +
-         "due_date, status, " +
-         "day_of_week, hour_from, " +
-         "hour_to, fixed_schedule " +
-         "FROM task " +
-         "LEFT JOIN schedule "+
-         "ON task.id = schedule.task_id", (err, row) => {
+    // SELECT
+    //         title,
+    //         description,
+    //         expected_minutes,
+    //         due_date,
+    //         status,
+    //         day_of_week,
+    //         hour_from,
+    //         hour_to,
+    //         fixed_schedule
+    //      FROM task
+    //      LEFT JOIN schedule
+    //      ON task.id = schedule.task_id
+
+    db.each(`
+        SELECT
+            title,
+            description,
+            expected_minutes,
+            due_date,
+            status
+         FROM task
+         `,
+        (err, row) => {
             if (err) {
                 console.error("SQL error:", err);
                 return;
             }
 
-            taskList.push(JSON.stringify(row));
+            const taskInfo = {
+                title: row.title,
+                description: row.description,
+                expected_minutes: row.expected_minutes,
+                due_date: row.due_date,
+                status: row.status,
+            };
+
+            taskList.push(taskInfo);
 
             // taskList += Object.entries(row)
             //     .map(([key, value]) => `${key}: ${value}`)
@@ -212,12 +260,24 @@ function displayTasksCommand(interaction) {
         },
         (err, count) => {
             console.log(taskList);
+            let numberOfPages = Math.ceil(taskList.length / 5);
             if (taskList.length === 0) {
-                taskList = "No tasks!"
+                taskList = ["No tasks!"];
+                numberOfPages = 1;
             }
-
-            const pager = new PagerSystem(2);
-            pager.sendPaginatedMessage(interaction, taskList)
+            else {
+                taskList = taskList.map((task, index) => {
+                    return `
+                        Title: ${task.title} - ${task.due_date ?? "N/A"}
+                        ${task.description}\n
+                        Expected Minutes: ${task.expected_minutes}
+                        Status: ${task.status}
+                    `
+                });
+            }
+            
+            const pager = new PagerSystem(numberOfPages);
+            pager.sendPaginatedMessage(interaction, taskList);
         }
     );
 }

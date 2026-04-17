@@ -14,11 +14,11 @@ class PagerSystem {
 
   /**
   * @param {Interaction<import('discord.js').CacheType>} interaction
-  *
+  * @param {string[]} data  
   */
   async sendPaginatedMessage(interaction, data) {
     let page = 0;
-    const maxPage = Math.ceil(data.length / this.pageSize) - 1;
+    const maxPage = Math.max(Math.ceil(data.length / this.pageSize) - 1, 0);
 
     const getEmbed = () => {
         const start = page * this.pageSize;
@@ -26,7 +26,7 @@ class PagerSystem {
 
         return new EmbedBuilder()
         .setTitle(`Results (Page ${page + 1}/${maxPage + 1})`)
-        .setDescription(items.join('\n'));
+        .setDescription(items.length > 0 ? items.join('\n') : 'No results');
     };
 
     const row = new ActionRowBuilder().addComponents(
@@ -45,7 +45,7 @@ class PagerSystem {
     const message = await interaction.reply({
         embeds: [getEmbed()],
         components: [row],
-        withResponse: true,
+        fetchReply: true,
     });
 
     const collector = message.createMessageComponentCollector({
@@ -58,8 +58,8 @@ class PagerSystem {
         return i.reply({ content: 'Not your menu!', ephemeral: true });
         }
 
-        if (i.customId === 'next') page++;
-        if (i.customId === 'back') page--;
+        if (i.customId === 'next' && page < maxPage) page++;
+        if (i.customId === 'back' && page > 0) page--;
 
         row.components[0].setDisabled(page === 0);
         row.components[1].setDisabled(page === maxPage);
